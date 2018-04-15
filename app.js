@@ -28,11 +28,6 @@ app.use(bodyParser.json());
 app.use(methodOverride('_method'));
 //-------- third-party middleware
 
-app.use(function(err, req, res, next) {
-    console.error(err.stack);
-    res.status(500).send('Something broke!');
-});
-
 // Load Idea Model
 require('./models/ideas');
 const Idea = mongoose.model('ideas');
@@ -47,7 +42,6 @@ app.get('/ideas', (req,res) => {
             });
         });
 });
-
 
 //-------- From
 // Add Idea Form
@@ -91,7 +85,7 @@ app.post('/ideas', (req,res) => {
         };
         new Idea(newUser)
             .save()
-            .then(idea => {
+            .then(() => {
                 res.redirect('/ideas');
             })
     }
@@ -109,7 +103,15 @@ app.put('/ideas/:id', (req,res) => {
             idea.save();
 
         });
-    res.send('PUT');
+    res.redirect('/ideas')
+});
+
+//Delete Form process
+app.delete('/ideas/:id', (req,res) => {
+    Idea.remove({_id: req.params.id})
+        .then(() =>{
+            res.redirect('/ideas')
+        });
 });
 //-------- From
 
