@@ -1,15 +1,15 @@
 const express =  require('express');
+const path = require('path');
 const exphbs  = require('express-handlebars');
-const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const methodOverride = require('method-override');
+const flash = require('connect-flash');
+const session = require('express-session');
 const app = express();
 
-// Connect to mongoose
-mongoose.connect('mongodb://localhost/vidjot-dev')
-    .then(() => console.log(`MongoDB connected......`))
-    .catch((err) => console.log(err));
-
+//Load routes
+const ideas = require('./routes/ideas');
+const users = require('./routes/users');
 
 //-------- third-party middleware
 
@@ -26,109 +26,52 @@ app.use(bodyParser.json());
 
 //Method override middleware
 app.use(methodOverride('_method'));
+
+//Express Session middleware
+app.set('trust proxy', 1); // trust first proxy
+app.use(session({
+    secret: 'keyboard cat',
+    resave: true,
+    saveUninitialized: true,
+}));
+
+//Connect flash middleware
+app.use(flash());
+
+// Global variable for flash
+app.use(function(req, res, next){
+    res.locals.success_msg = req.flash('success_msg');
+    res.locals.error_msg = req.flash('error_msg');
+    res.locals.error = req.flash('error');// for passport
+    next();
+});
+
+//Static folder
+app.use(express.static(path.join(__dirname,'public')));
 //-------- third-party middleware
 
-// Load Idea Model
-require('./models/ideas');
-const Idea = mongoose.model('ideas');
-
-// Idea Index Page
-app.get('/ideas', (req,res) => {
-    Idea.find({})
-        .sort({date: 'desc'})
-        .then(ideas => {
-            res.render('ideas/index', {
-                ideas: ideas
-            });
-        });
-});
-
-//-------- From
-// Add Idea Form
-app.get('/ideas/add', (req,res) => {
-    res.render('ideas/add');
-});
-
-// Edit Idea Form
-app.get('/ideas/edit/:id',(req,res) => {
-    Idea.findOne({
-        _id: req.params.id
-    })
-    .then(idea => {
-        res.render('ideas/edit',{
-            idea: idea
-        });
-        }
-    );
-
-});
-
-// Process Form
-app.post('/ideas', (req,res) => {
-    let errors = [];
-    if(!req.body.title){
-        errors.push({text:`Please add a title`});
-    }
-    if(!req.body.details){
-        errors.push({text:`Please add some details`});
-    }
-    if(errors.length > 0){
-        res.render('ideas/add',{
-            errors: errors,
-            title: req.body.title,
-            details: req.body.details
-        });
-    }else{
-        const newUser = {
-            title: req.body.title,
-            details: req.body.details
-        };
-        new Idea(newUser)
-            .save()
-            .then(() => {
-                res.redirect('/ideas');
-            })
-    }
-});
-
-//Edit Form process
-app.put('/ideas/:id', (req,res) => {
-    Idea.findOne({
-        _id: req.params.id
-    })
-        .then(idea =>{
-            //new Values
-            idea.title = req.body.title;
-            idea.details = req.body.details;
-            idea.save();
-
-        });
-    res.redirect('/ideas')
-});
-
-//Delete Form process
-app.delete('/ideas/:id', (req,res) => {
-    Idea.remove({_id: req.params.id})
-        .then(() =>{
-            res.redirect('/ideas')
-        });
-});
-//-------- From
-
-const port = 5000;
 
 // Index Route
 app.get('/',(req,res) => {
     const title = 'Welcome';
     res.render('Index',
         {title: title}
-        );
+    );
 });
 
 // About Route
 app.get('/about',(req,res) => {
     res.render('about');
 });
+
+//ideas routes
+app.use('/ideas',ideas);
+
+//users route
+app.use('/users',users);
+
+const port = 5000;
+
 
 app.listen(port, () => {
     console.log(`Server started on port ${port} yaasa`);
