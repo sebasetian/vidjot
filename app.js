@@ -5,7 +5,18 @@ const bodyParser = require('body-parser');
 const methodOverride = require('method-override');
 const flash = require('connect-flash');
 const session = require('express-session');
+const passport = require('passport');
+const mongoose = require('mongoose');
 const app = express();
+//Passport Config
+require('./config/passport')(passport);
+//DB Config
+const db = require('./config/database');
+
+// Connect to mongoose
+mongoose.connect(db.mongoURI)
+    .then(() => console.log(`MongoDB connected......`))
+    .catch((err) => console.log(err));
 
 //Load routes
 const ideas = require('./routes/ideas');
@@ -34,15 +45,19 @@ app.use(session({
     resave: true,
     saveUninitialized: true,
 }));
+//Passport Session middleware
+app.use(passport.initialize());
+app.use(passport.session());
 
 //Connect flash middleware
 app.use(flash());
 
-// Global variable for flash
+// Global variables
 app.use(function(req, res, next){
     res.locals.success_msg = req.flash('success_msg');
     res.locals.error_msg = req.flash('error_msg');
     res.locals.error = req.flash('error');// for passport
+    res.locals.user = req.user || null; // for login
     next();
 });
 
@@ -70,8 +85,7 @@ app.use('/ideas',ideas);
 //users route
 app.use('/users',users);
 
-const port = 5000;
-
+const port = process.env.PORT || 5000;
 
 app.listen(port, () => {
     console.log(`Server started on port ${port} yaasa`);
