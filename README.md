@@ -1,2 +1,2 @@
 # vidjot
-a video website app built with node.js and mongoldb
+a video website app built with node.js and mongodb
